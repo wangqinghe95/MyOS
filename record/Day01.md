@@ -34,6 +34,10 @@ sudo apt install -y gcc-multilib
     + 引导过程：当你按下电源键时，发生了什么事
     + BIOS/UEFI：它们做了什么
     + 内存映射：硬件设备（如 VGA 显存）在内存中的位置
+4. 磁盘结构与加载流程：
+    + 磁盘的组成与结构
+    + 加载磁盘的基本操作流程
+    + boot.asm 中实现磁盘加载函数及后续用途
 
 ### 实模式 VS 保护模式
 
@@ -373,8 +377,103 @@ qemu-system-x86_64 -nographic -serial mon:stdio -drive format=raw,file=boot_seri
 
 ---
 
-**总结：**
-- 串口输出适合无头环境、远程调试、嵌入式开发。
-- 代码中每一步都对应串口芯片的硬件寄存器设置，理解这些寄存器有助于后续开发更复杂的 bootloader 和内核调试功能。
+## 补充：磁盘结构与加载流程
+
+### 磁盘的组成与结构
+- 磁盘（硬盘/软盘）由多个柱面（Cylinder）、磁头（Head）、扇区（Sector）组成。
+- 每个扇区通常为 512 字节，是 BIOS 读写的最小单位。
+- 传统 BIOS 用 CHS（柱面-磁头-扇区）寻址，现代硬盘支持 LBA（逻辑块地址）寻址。
+- 引导区（MBR）是磁盘第一个扇区，存放引导代码和分区表。
+
+### 加载磁盘的基本操作流程
+1. 设置目标内存地址（ES:BX），数据将被读到这里。
+2. 设置 CHS 或 LBA 参数，指定要读的扇区位置。
+3. 设置驱动器号（DL），0x00=软盘，0x80=第一个硬盘。
+4. 调用 BIOS int 0x13，AH=0x02（读扇区），AL=要读的扇区数。
+5. 检查 CF 标志和 AH 错误码，判断是否读取成功。
+
+### boot.asm 中实现磁盘加载函数
+
+下面是一个磁盘加载函数的实现（读取第2扇区到0x8000），并在屏幕输出结果：
+
+```asm
+org 0x7C00
+bits 16
+
+start:
+    cli
+    xor ax, ax
+    mov ss, ax
+    mov sp, 0x7C00
+    sti
+
+    call load_disk_sector
+    jc disk_error
+
+    mov si, success_msg
+    call print_string
+    jmp .hang
+
+disk_error:
+    mov si, error_msg
+    call print_string
+    jmp .hang
+
+;---------------------------------------------
+; 加载磁盘第2扇区到 0x0000:0x8000
+;---------------------------------------------
+load_disk_sector:
+    mov ax, 0x0000
+    mov es, ax
+    mov bx, 0x8000
+    mov ah, 0x02        ; 读扇区
+    mov al, 1           ; 读1个扇区
+    mov ch, 0           ; 柱面0
+    mov cl, 2           ; 扇区2（第1扇区是1）
+    mov dh, 0           ; 磁头0
+    mov dl, 0x80        ; 驱动器号（硬盘）
+    int 0x13            ; BIOS磁盘服务
+    ret
+
+;---------------------------------------------
+; 打印字符串到屏幕（BIOS int 0x10）
+;---------------------------------------------
+print_string:
+    lodsb
+    cmp al, 0
+    je .ret_print
+    mov ah, 0x0E
+    mov bh, 0x00
+    mov bl, 0x07
+    int 0x10
+    jmp print_string
+.ret_print:
+    ret
+
+success_msg db "磁盘加载成功!", 0
+error_msg db "磁盘加载失败!", 0
+
+.hang:
+    cli
+    hlt
+
+times 510-($-$$) db 0
+dw 0xAA55
+```
+
+### 代码说明
+- `load_disk_sector`：用 int 0x13 读取第2扇区到 0x8000，出错时 CF=1。
+- `print_string`：用 int 0x10 打印字符串，遇到0结束。
+- 成功/失败分别输出不同信息。
+
+### 后续用途
+- 加载二阶段引导器（loader）：boot.asm 只负责最小功能，二阶段可以用更复杂的代码（如C语言内核）。
+- 加载内核：把内核映像从磁盘读到内存并跳转执行。
+- 加载文件系统元数据：如FAT、EXT等，需先读磁盘扇区。
+- 读取配置、驱动、模块等：操作系统启动时常用磁盘加载。
+
+---
+
+如需更复杂的磁盘加载（如多扇区、LBA模式、错误重试），或需要C语言内核对接，请随时告知！
 
 
