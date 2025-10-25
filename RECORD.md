@@ -116,6 +116,8 @@ qemu-system-x86_64 boot.bin
 
 # vscode 终端 ssh 执行 QEMU 结果
 qemu-system-x86_64 -nographic -monitor none -serial mon:stdio -drive file=boot.bin,format=raw,index=0,if=floppy
+
+qemu-system-x86_64 -nographic -serial mon:stdio -drive format=raw,file=boot_serial.bin
 ```
 
 ### 运行结果
@@ -243,5 +245,136 @@ times 510 - ($ - $$) db 0
 
 + 写入引导签名 0x55AA（注意小端序写入会在磁盘上以 55 AA 的顺序保存）。
 + BIOS 在尝试从介质引导时会检查每个扇区末尾的 0x55AA 来判定该扇区是否为引导扇区；缺失此签名通常导致 BIOS 忽略该镜像作为引导设备。
+## 使用串口输出（boot_serial.asm）
+
+在没有图形界面的环境下，推荐用串口输出调试和显示信息。下面详细介绍串口初始化涉及的寄存器和每一步的作用。
+
+### 串口输出代码结构
+
+```boot_serial.asm
+start:
+    cli
+    xor ax, ax
+    mov ss, ax
+    mov sp, 0x7C00
+    sti
+    call init_serial         ; 初始化串口
+    mov si, msg
+.print_loop:
+    lodsb
+    cmp al, 0
+    je .hang
+    call serial_putchar      ; 发送 AL 到串口
+    jmp .print_loop
+.hang:
+    cli
+    hlt
+
+; 串口初始化例程 (COM1, 38400 8N1)
+init_serial:
+    ; 设置 IER = 0 (禁用中断)
+    mov dx, 0x3F8      ; COM1 base port
+    mov al, 0x00
+    add dx, 1
+    out dx, al
+    sub dx, 1
+    ; 设置 DLAB = 1，准备设置分频器
+    mov dx, 0x3F8
+    add dx, 3
+    mov al, 0x80       ; LCR: DLAB=1
+    out dx, al
+    sub dx, 3
+    ; 设置波特率分频器 (38400)
+    mov dx, 0x3F8
+    mov al, 3          ; divisor low byte
+    out dx, al
+    inc dx
+    mov al, 0          ; divisor high byte
+    out dx, al
+    dec dx
+    ; 设置 LCR = 8N1 (8位，无校验，1停止位)
+    mov dx, 0x3F8
+    add dx, 3
+    mov al, 0x03       ; LCR: DLAB=0, 8N1
+    out dx, al
+    sub dx, 3
+    ; 启用 FIFO
+    mov dx, 0x3F8
+    add dx, 2
+    mov al, 0xC7       ; FCR: 启用FIFO，清空，14字节阈值
+    out dx, al
+    sub dx, 2
+    ; 设置 MCR (RTS/DSR/OUT2)
+    mov dx, 0x3F8
+    add dx, 4
+    mov al, 0x0B       ; MCR: IRQs enabled, RTS/DSR set
+    out dx, al
+    sub dx, 4
+    ret
+
+; 串口发送单字符例程 (AL)
+serial_putchar:
+    push dx
+    push ax
+    mov dx, 0x3F8
+    add dx, 5           ; LSR port
+.wait_lsr:
+    in al, dx
+    test al, 0x20       ; 检查 THRE (发送寄存器空)
+    jz .wait_lsr
+    pop ax              ; 恢复要发送的字符到 AL
+    mov dx, 0x3F8       ; 数据端口
+    out dx, al
+    pop dx
+    ret
+
+msg db "Hello, OS! Booted to serial from boot_serial.asm", 0
+```
+
+### 串口初始化步骤与寄存器说明
+
+PC 的标准串口 COM1 基地址是 0x3F8，串口芯片（16550A）有多个寄存器，分别控制不同功能：
+
+1. **数据端口 (Data Register, 0x3F8)**
+   - 用于收发数据。写入一个字节即可发送。
+2. **中断使能寄存器 (IER, 0x3F9)**
+   - 控制串口中断。我们设置为 0，禁用所有串口中断。
+3. **分频器锁存寄存器 (DLL/DLM, 0x3F8/0x3F9, 需 DLAB=1)**
+   - 设置波特率。波特率 = 基准频率 / 分频值。常见基准频率为 115200Hz，分频值为 3，则波特率为 38400。
+   - DLL (低字节) 写入 3，DLM (高字节) 写入 0。
+4. **线路控制寄存器 (LCR, 0x3FB)**
+   - 控制数据位、停止位、校验位和 DLAB 位。
+   - DLAB=1 时可设置分频器，DLAB=0 时正常通信。
+   - 设置为 0x03 表示 8位数据，无校验，1停止位（8N1）。
+5. **FIFO 控制寄存器 (FCR, 0x3FA)**
+   - 控制 FIFO 缓冲区。0xC7 启用 FIFO，清空缓冲，设置 14字节阈值。
+6. **调制解调器控制寄存器 (MCR, 0x3FC)**
+   - 控制 RTS/DSR/OUT2 等信号。0x0B 启用 IRQs，设置 RTS/DSR。
+7. **线路状态寄存器 (LSR, 0x3FD)**
+   - 只读。用于检测发送寄存器是否空（THRE 位，0x20）。发送前需轮询该位。
+
+### 串口发送字符流程
+- 发送字符前，先轮询 LSR 的 THRE 位，确保发送寄存器空。
+- 然后将要发送的字符写入数据端口 (0x3F8)。
+- 这样可以保证数据不会丢失。
+
+### 编译和运行
+```bash
+nasm -f bin boot_serial.asm -o boot_serial.bin
+qemu-system-x86_64 -nographic -serial mon:stdio -drive format=raw,file=boot_serial.bin
+```
+
+### 运行效果
+- 如果一切正常，你会在终端看到：
+
+  Hello, OS! Booted to serial from boot_serial.asm
+
+- 如果没有输出，请检查 boot_serial.asm 是否正确生成、QEMU 参数是否正确、串口初始化代码是否有误。
+
+---
+
+**总结：**
+- 串口输出适合无头环境、远程调试、嵌入式开发。
+- 代码中每一步都对应串口芯片的硬件寄存器设置，理解这些寄存器有助于后续开发更复杂的 bootloader 和内核调试功能。
 
 
