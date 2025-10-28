@@ -1,4 +1,4 @@
-# 从零开始制作 MyOS
+# 从零开始制作 MyOS（一）—— 最简单的操作系统内核
 
 ## 开发环境
 
@@ -129,7 +129,7 @@ qemu-system-x86_64 -nographic -serial mon:stdio -drive format=raw,file=boot_seri
 1. 会出现一个 QEMU 的黑屏窗口
 2. 打印出 “"Hello, OS! Booted from boot.asm"”
 
-[qemu-system-x86_64 boot.bin](./Resources/pic-1-1.png)
+[boot.asm 运行成功](./Resources/pic-1-1.png)
 
 ### 代码详解
 

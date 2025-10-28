@@ -1,15 +1,36 @@
-# Makefile - assemble and run the boot sector
-NASM=nasm
-NASMFLAGS=-f bin
-QEMU=qemu-system-x86_64
+# Makefile for protected mode bootloader
 
-all: boot.bin
+# Tools
+NASM := nasm
+DD := dd
+QEMU := qemu-system-i386
 
-boot.bin: boot.asm
-	$(NASM) $(NASMFLAGS) -o boot.bin boot.asm
+# Files
+BOOT_BIN := boot.bin
+DISK_IMG := disk.img
 
-run: boot.bin
-	$(QEMU) -drive format=raw,file=boot.bin
+# Targets
+all: $(DISK_IMG)
 
+# Assemble bootloader
+$(BOOT_BIN): boot.asm
+	$(NASM) -f bin -o $@ $<
+
+# Create disk image (1MB) and write bootloader
+$(DISK_IMG): $(BOOT_BIN)
+	$(DD) if=/dev/zero of=$@ bs=512 count=2048
+	$(DD) if=$(BOOT_BIN) of=$@ conv=notrunc
+
+# Run in QEMU (no graphic console)
+run: $(DISK_IMG)
+	$(QEMU) -drive file=$(DISK_IMG),format=raw -nographic
+
+# Run in QEMU with VGA output
+run-vga: $(DISK_IMG)
+	$(QEMU) -drive file=$(DISK_IMG),format=raw
+
+# Clean build artifacts
 clean:
-	rm -f boot.bin
+	rm -f $(BOOT_BIN) $(DISK_IMG)
+
+.PHONY: all run run-vga clean
