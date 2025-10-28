@@ -1,36 +1,37 @@
-# Makefile for protected mode bootloader
+CC = gcc
+LD = ld
+ASM = nasm
 
-# Tools
-NASM := nasm
-DD := dd
-QEMU := qemu-system-i386
+CFLAGS = -m32 -ffreestanding -nostdlib -c
+ASFLAGS = -f elf32
+LDFLAGS = -m elf_i386 -T linker.ld -nostdlib
 
-# Files
-BOOT_BIN := boot.bin
-DISK_IMG := disk.img
+all: os.img
 
-# Targets
-all: $(DISK_IMG)
+os.img: boot.bin kernel.bin
+	dd if=/dev/zero of=os.img bs=512 count=2880
+	dd if=boot.bin of=os.img conv=notrunc
+	dd if=kernel.bin of=os.img bs=512 seek=1 conv=notrunc
 
-# Assemble bootloader
-$(BOOT_BIN): boot.asm
-	$(NASM) -f bin -o $@ $<
+boot.bin: boot.asm
+	$(ASM) -f bin boot.asm -o boot.bin
 
-# Create disk image (1MB) and write bootloader
-$(DISK_IMG): $(BOOT_BIN)
-	$(DD) if=/dev/zero of=$@ bs=512 count=2048
-	$(DD) if=$(BOOT_BIN) of=$@ conv=notrunc
+kernel.bin: kernel.elf
+	objcopy -O binary kernel.elf kernel.bin
 
-# Run in QEMU (no graphic console)
-run: $(DISK_IMG)
-	$(QEMU) -drive file=$(DISK_IMG),format=raw -nographic
+kernel.elf: entry.o kernel.o
+	$(LD) $(LDFLAGS) -o kernel.elf entry.o kernel.o
 
-# Run in QEMU with VGA output
-run-vga: $(DISK_IMG)
-	$(QEMU) -drive file=$(DISK_IMG),format=raw
+kernel.o: kernel.c
+	$(CC) $(CFLAGS) kernel.c -o kernel.o
 
-# Clean build artifacts
+entry.o: entry.asm
+	$(ASM) $(ASFLAGS) entry.asm -o entry.o
+
 clean:
-	rm -f $(BOOT_BIN) $(DISK_IMG)
+	rm -f *.o *.bin *.elf os.img
 
-.PHONY: all run run-vga clean
+run: os.img
+	qemu-system-x86_64 -drive format=raw,file=os.img
+
+.PHONY: all clean run
