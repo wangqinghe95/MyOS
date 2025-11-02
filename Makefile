@@ -3,7 +3,9 @@ LD = ld
 ASM = nasm
 QEMU = qemu-system-x86_64
 
-CFLAGS = -m32 -ffreestanding -nostdlib -c
+INCLUDES = -I drivers
+
+CFLAGS = -m32 -ffreestanding -nostdlib -c $(INCLUDES)
 ASFLAGS = -f elf32
 LDFLAGS = -m elf_i386 -T scripts/linker.ld -nostdlib
 
@@ -17,7 +19,12 @@ KERNEL_ENTRY_OBJ = kernel/entry.o
 KERNEL_C_SRC = kernel/kernel.c
 KERNEL_C_OBJ = kernel/kernel.o
 
+SCREEN_H = drivers/screen.h
+SCREEN_C_SRC = drivers/screen.c
+SCREEN_C_OBJ = drivers/screen.o
+
 KERNEL_BIN = kernel/kernel.bin
+KERNEL_ELF = kernel/kernel.elf
 
 all: $(OS_IMAGE)
 
@@ -29,20 +36,23 @@ $(OS_IMAGE): $(BOOT_BIN) $(KERNEL_BIN)
 $(BOOT_BIN): $(BOOT_SRC)
 	$(ASM) -f bin $(BOOT_SRC) -o $(BOOT_BIN)
 
-$(KERNEL_BIN): kernel/kernel.elf
-	objcopy -O binary kernel/kernel.elf $(KERNEL_BIN)
+$(KERNEL_BIN): $(KERNEL_ELF)
+	objcopy -O binary $(KERNEL_ELF) $(KERNEL_BIN)
 
-kernel/kernel.elf: $(KERNEL_ENTRY_OBJ) kernel/kernel.o
-	$(LD) $(LDFLAGS) -o kernel/kernel.elf $(KERNEL_ENTRY_OBJ) $(KERNEL_C_OBJ)
+$(KERNEL_ELF): $(KERNEL_ENTRY_OBJ) $(KERNEL_C_OBJ) $(SCREEN_C_OBJ)
+	$(LD) $(LDFLAGS) -o $(KERNEL_ELF) $(KERNEL_ENTRY_OBJ) $(KERNEL_C_OBJ) $(SCREEN_C_OBJ)
 
-$(KERNEL_C_OBJ): $(KERNEL_C_SRC)
+$(KERNEL_C_OBJ): $(KERNEL_C_SRC) $(SCREEN_H)
 	$(CC) $(CFLAGS) $(KERNEL_C_SRC) -o $(KERNEL_C_OBJ)
+
+$(SCREEN_C_OBJ): $(SCREEN_C_SRC) $(SCREEN_H)
+	$(CC) $(CFLAGS) $(SCREEN_C_SRC) -o $(SCREEN_C_OBJ)
 
 $(KERNEL_ENTRY_OBJ): $(KERNEL_ENTRY_SRC)
 	$(ASM) $(ASFLAGS) $(KERNEL_ENTRY_SRC) -o $(KERNEL_ENTRY_OBJ)
 
 clean:
-	rm -f *.o *.bin *.elf $(OS_IMAGE) $(BOOT_BIN) kernel/kernel.elf $(KERNEL_BIN) $(KERNEL_ENTRY_OBJ) $(KERNEL_C_OBJ)
+	rm -f  $(OS_IMAGE) $(BOOT_BIN) $(KERNEL_ELF) $(KERNEL_BIN) $(KERNEL_ENTRY_OBJ) $(KERNEL_C_OBJ) $(SCREEN_C_OBJ)
 
 run: $(OS_IMAGE)
 	$(QEMU) -drive format=raw,file=$(OS_IMAGE)
