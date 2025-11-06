@@ -1,24 +1,40 @@
 #include "screen.h"
 #include "interrupt.h"
 
+/* 触发除零异常的函数 */
+void test_divide_by_zero(void) {
+    printf("About to trigger divide by zero...\n");
+    
+    // 给用户一点时间看消息
+    for (volatile int i = 0; i < 1000000; i++);
+    
+    // 触发除零异常
+    // 纯 C 代码可能会直接被编译器优化掉
+    asm volatile("mov $0, %eax");
+    asm volatile("div %eax");  // 0 / 0 = 异常!
+}
+
 void kernel_main(void) {
     clear_screen();
-    printf("=== Minimal Exception Test ===\n\n");
-    
-    // 显示关键地址信息
-    printf("Key Addresses:\n");
-    printf("  kernel_main: 0x%x\n", (uint32_t)kernel_main);
+    printf("Simple Interrupt System Test\n");
+    printf("============================\n\n");
     
     // 初始化中断系统
     idt_init();
     
-    printf("\nIf addresses are wrong, system will crash.\n");
-    printf("If correct, you'll see 'EXCP0' in top-left.\n\n");
+    printf("\nTesting divide by zero exception...\n");
+    printf("This will trigger in 2 seconds...\n");
     
-    // 触发测试
-    test_interrupt();
+    // 简单延时
+    for (volatile int i = 0; i < 3000000; i++);
     
-    // 不应该执行到这里
-    printf("TEST FAILED: Should not reach here!\n");
-    while(1);
+    // 触发异常
+    test_divide_by_zero();
+    
+    // 这行代码不应该执行
+    printf("ERROR: If you see this, exception handling failed!\n");
+    
+    while(1) {
+        // 空循环
+    }
 }
