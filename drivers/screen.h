@@ -1,7 +1,7 @@
 #ifndef SCREEN_H
 #define SCREEN_H
 
-#include <stdint.h>
+#include "types.h"
 
 /* 屏幕颜色枚举 */
 typedef enum {

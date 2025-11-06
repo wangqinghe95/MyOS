@@ -1,30 +1,5 @@
 # 从零开始制作 MyOS（一）—— 最简单的操作系统内核
 
-## 开发环境
-
-1. 操作系统：ubuntu22 （windows10 + VMware15pro + ubunut22 + qemu）
-2. 编译器：gcc-multilib
-3. 汇编器：nasm
-4. 模拟器: QEMU
-5. 版本控制: git
-
-## 安装依赖
-
-ubuntu22 中：
-
-``` bash
-# 安装必要的工具链
-sudo apt update
-sudo apt install -y build-essential
-sudo apt install -y qemu-system-x86 
-sudo apt install -y nasm    # x86架构汇编器
-sudo apt install -y gdb
-sudo apt install -y git
-sudo apt install -y mtools  # 用于制作磁盘镜像
-
-# 安装交叉编译器（重要！避免使用宿主系统的libc）
-sudo apt install -y gcc-multilib
-```
 
 ## 前置知识
 
