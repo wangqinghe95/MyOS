@@ -21,21 +21,26 @@ KERNEL_C_OBJ = kernel/kernel.o
 
 TYPE_H = kernel/types.h
 
+# ========== 屏幕驱动 ==========
 SCREEN_H = drivers/screen.h
 SCREEN_C_SRC = drivers/screen.c
 SCREEN_C_OBJ = drivers/screen.o
 
-KERNEL_BIN = kernel/kernel.bin
-KERNEL_ELF = kernel/kernel.elf
-
-# ========== 新增中断相关部分 ==========
+# ========== 中断相关 ==========
 INTERRUPT_H = kernel/interrupt.h
 INTERRUPT_C_SRC = kernel/interrupt.c
 INTERRUPT_C_OBJ = kernel/interrupt_c.o
 
 INTERRUPT_ASM_SRC = kernel/interrupt.asm
 INTERRUPT_ASM_OBJ = kernel/interrupt_asm.o
-# ====================================
+
+# ========== 新增定时器驱动 ==========
+TIMER_H = drivers/timer.h
+TIMER_C_SRC = drivers/timer.c
+TIMER_C_OBJ = drivers/timer.o
+
+KERNEL_BIN = kernel/kernel.bin
+KERNEL_ELF = kernel/kernel.elf
 
 all: $(OS_IMAGE)
 
@@ -50,32 +55,39 @@ $(BOOT_BIN): $(BOOT_SRC)
 $(KERNEL_BIN): $(KERNEL_ELF)
 	objcopy -O binary $(KERNEL_ELF) $(KERNEL_BIN)
 
-# ========== 更新链接命令 ==========
-$(KERNEL_ELF): $(KERNEL_ENTRY_OBJ) $(KERNEL_C_OBJ) $(SCREEN_C_OBJ) $(INTERRUPT_ASM_OBJ) $(INTERRUPT_C_OBJ)
-	$(LD) $(LDFLAGS) -o $(KERNEL_ELF) $(KERNEL_ENTRY_OBJ) $(KERNEL_C_OBJ) $(SCREEN_C_OBJ) $(INTERRUPT_ASM_OBJ) $(INTERRUPT_C_OBJ)
+# ========== 更新链接命令，添加定时器对象 ==========
+$(KERNEL_ELF): $(KERNEL_ENTRY_OBJ) $(KERNEL_C_OBJ) $(SCREEN_C_OBJ) $(INTERRUPT_ASM_OBJ) $(INTERRUPT_C_OBJ) $(TIMER_C_OBJ)
+	$(LD) $(LDFLAGS) -o $(KERNEL_ELF) $(KERNEL_ENTRY_OBJ) $(KERNEL_C_OBJ) $(SCREEN_C_OBJ) $(INTERRUPT_ASM_OBJ) $(INTERRUPT_C_OBJ) $(TIMER_C_OBJ)
 
-# ========== 新增中断编译规则 ==========
+# ========== 新增定时器编译规则 ==========
+$(TIMER_C_OBJ): $(TIMER_C_SRC) $(TIMER_H) $(SCREEN_H) $(TYPE_H)
+	$(CC) $(CFLAGS) $(TIMER_C_SRC) -o $(TIMER_C_OBJ)
+
+# ========== 中断汇编编译规则 ==========
 $(INTERRUPT_ASM_OBJ): $(INTERRUPT_ASM_SRC)
 	$(ASM) $(ASFLAGS) $(INTERRUPT_ASM_SRC) -o $(INTERRUPT_ASM_OBJ)
 
-$(INTERRUPT_C_OBJ): $(INTERRUPT_C_SRC) $(INTERRUPT_H) $(TYPE_H) $(SCREEN_H)
+# ========== 中断C文件编译规则 ==========
+$(INTERRUPT_C_OBJ): $(INTERRUPT_C_SRC) $(INTERRUPT_H) $(TYPE_H) $(SCREEN_H) $(TIMER_H)
 	$(CC) $(CFLAGS) $(INTERRUPT_C_SRC) -o $(INTERRUPT_C_OBJ)
 
-# ========== 更新kernel.c依赖 ==========
-$(KERNEL_C_OBJ): $(KERNEL_C_SRC) $(SCREEN_H) $(TYPE_H) $(INTERRUPT_H)
+# ========== 更新kernel.c依赖，添加定时器头文件 ==========
+$(KERNEL_C_OBJ): $(KERNEL_C_SRC) $(SCREEN_H) $(TYPE_H) $(INTERRUPT_H) $(TIMER_H)
 	$(CC) $(CFLAGS) $(KERNEL_C_SRC) -o $(KERNEL_C_OBJ)
 
+# ========== 屏幕驱动编译规则 ==========
 $(SCREEN_C_OBJ): $(SCREEN_C_SRC) $(SCREEN_H) $(TYPE_H)
 	$(CC) $(CFLAGS) $(SCREEN_C_SRC) -o $(SCREEN_C_OBJ)
 
+# ========== 内核入口汇编编译规则 ==========
 $(KERNEL_ENTRY_OBJ): $(KERNEL_ENTRY_SRC)
 	$(ASM) $(ASFLAGS) $(KERNEL_ENTRY_SRC) -o $(KERNEL_ENTRY_OBJ)
 
-# ========== 更新清理规则 ==========
+# ========== 更新清理规则，添加定时器对象文件 ==========
 clean:
 	rm -f  $(OS_IMAGE) $(BOOT_BIN) $(KERNEL_ELF) $(KERNEL_BIN) \
 	       $(KERNEL_ENTRY_OBJ) $(KERNEL_C_OBJ) $(SCREEN_C_OBJ) \
-	       $(INTERRUPT_ASM_OBJ) $(INTERRUPT_C_OBJ)
+	       $(INTERRUPT_ASM_OBJ) $(INTERRUPT_C_OBJ) $(TIMER_C_OBJ)
 
 run: $(OS_IMAGE)
 	$(QEMU) -drive format=raw,file=$(OS_IMAGE)

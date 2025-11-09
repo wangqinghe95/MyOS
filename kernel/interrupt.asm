@@ -4,10 +4,11 @@ section .text
 extern divide_by_zero_handler
 extern general_protection_fault_handler
 extern default_exception_handler
+extern timer_interrupt_handler
 
 ; 全局符号
 global idt_load
-global isr0, isr13
+global isr0, isr13, isr32
 
 ; 加载IDT
 idt_load:
@@ -35,6 +36,7 @@ isr%1:
 ; 定义具体的中断处理程序
 ISR_NOERRCODE 0    ; 除零异常
 ISR_ERRCODE 13     ; 通用保护故障
+ISR_NOERRCODE 32    ; 定时器中断（IRQ0）
 
 ; 通用中断处理程序
 isr_common:
@@ -61,6 +63,8 @@ isr_common:
     je .call_divide_zero
     cmp eax, 13
     je .call_general_protection
+    cmp eax, 32
+    je .call_timer
     jmp .call_default
 
 .call_divide_zero:
@@ -73,6 +77,10 @@ isr_common:
     push esp            ; 传递栈帧指针给C函数
     call general_protection_fault_handler
     add esp, 4
+    jmp .done
+
+.call_timer:
+    call timer_interrupt_handler
     jmp .done
 
 .call_default:

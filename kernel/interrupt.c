@@ -1,5 +1,6 @@
 #include "interrupt.h"
 #include "screen.h"
+#include "timer.h"
 
 #define IDT_ENTRIES 256
 
@@ -73,6 +74,31 @@ void idt_init(void) {
     printf("IDT initialized with exception handlers\n");
     printf("  - ISR0 (Divide Error) at: 0x%x\n", (uint32_t)isr0);
     printf("  - ISR13 (GPF) at: 0x%x\n", (uint32_t)isr13);
+}
+
+void init_pic(void)
+{
+    outb(0x20, 0x11);
+    outb(0xA0, 0x11);
+
+    outb(0x21, 0x20);
+    outb(0xA1, 0x28);
+
+    outb(0x21, 0x04);
+    outb(0xA1, 0x02);
+
+    outb(0x21, 0x01);
+    outb(0xA1, 0x01);
+
+    outb(0x21, 0xFE);
+    outb(0xA1, 0xFF);
+
+    printf("PIC remapped: IRQ0-7 -> 0x20-0x27");
+}
+void install_timer_interrupt(void)
+{
+    idt_set_gate(32, (uint32_t)isr32, 0x08, 0x8E);
+    printf("Timer interrupt installed at vector 0x20(IRQ0)\n");
 }
 
 /* 默认异常处理 */

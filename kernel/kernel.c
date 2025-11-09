@@ -1,5 +1,6 @@
 #include "screen.h"
 #include "interrupt.h"
+#include "timer.h"
 
 // ==================== 当前可用的测试函数 ====================
 
@@ -61,6 +62,31 @@ void test_hardware_interrupts(void) {
     printf("Timer, keyboard, and other hardware interrupts.\n");
 }
 
+void test_timer_interrupt()
+{
+    init_pic();
+    install_timer_interrupt();
+    init_timer();
+
+    printf("Kernel initialized successfully\n");
+
+    asm volatile("sti");
+
+    printf("Interrupt enabled - timer should start ticking");
+
+    while (1)
+    {
+        uint32_t current_ticks = get_ticks();
+
+        if(current_ticks % (TIMER_FREQUENCY * 2) == 0) {
+            // printf("Circle print\n");
+        }
+
+        asm volatile("hlt");
+    }
+    
+}
+
 /**
  * 运行测试
  */
@@ -89,9 +115,7 @@ void run_test(int choice) {
             break;
             
         case 5:
-            // show_system_info();
-            // printf("\nPress any key to continue...\n");
-            // for (volatile int i = 0; i < 3000000; i++);
+            test_timer_interrupt();
             break;
             
         case 6:
@@ -128,7 +152,7 @@ void kernel_main(void) {
     
     clear_screen();
     // test_divide_by_zero();
-    run_test(2);
+    run_test(5);
     
     // 如果异常处理失败，才会执行到这里
     printf("\nERROR: Exception handling failed! System unstable.\n");

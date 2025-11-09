@@ -14,10 +14,13 @@ struct interrupt_frame {
 /* 函数声明 */
 void idt_init(void);
 void idt_load(uint32_t idt_ptr);
+void init_pic(void);
+void install_timer_interrupt(void);
 
 /* 汇编函数声明 */
 extern void isr0(void);
 extern void isr13(void);
+extern void isr32(void);
 
 /* 异常处理函数 */
 void divide_by_zero_handler(struct interrupt_frame* frame);
