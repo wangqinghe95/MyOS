@@ -1,95 +1,108 @@
+# 工具定义
 CC = gcc
 LD = ld
 ASM = nasm
+OBJCOPY = objcopy
 QEMU = qemu-system-x86_64
 
-INCLUDES = 
+# 目录结构
+BOOT_DIR = boot
+KERNEL_DIR = kernel
+DRIVERS_DIR = drivers
+SCRIPT_DIR = scripts
 
-CFLAGS = -m32 -ffreestanding -nostdlib -c -I drivers -I kernel
+# 编译和链接标志
+CFLAGS = -m32 -nostdlib -ffreestanding -Wall -Wextra -I$(KERNEL_DIR) -I$(DRIVERS_DIR)
+LDFLAGS = -m elf_i386 -T $(SCRIPT_DIR)/linker.ld -nostdlib
 ASFLAGS = -f elf32
-LDFLAGS = -m elf_i386 -T scripts/linker.ld -nostdlib
 
+# 自动查找源文件（使用更精确的查找）
+KERNEL_C_SRCS = $(shell find $(KERNEL_DIR) -name "*.c" -not -name ".*")
+DRIVER_C_SRCS = $(shell find $(DRIVERS_DIR) -name "*.c" -not -name ".*")
+KERNEL_ASM_SRCS = $(shell find $(KERNEL_DIR) -name "*.asm" -not -name ".*")
+
+# 推导目标文件（使用不同的命名避免冲突）
+KERNEL_C_OBJS = $(KERNEL_C_SRCS:.c=.c.o)
+DRIVER_C_OBJS = $(DRIVER_C_SRCS:.c=.c.o)
+KERNEL_ASM_OBJS = $(KERNEL_ASM_SRCS:.asm=.asm.o)
+
+# 正确的链接顺序
+ALL_OBJS = $(KERNEL_ASM_OBJS) $(KERNEL_C_OBJS) $(DRIVER_C_OBJS)
+
+# 最终目标
+KERNEL_ELF = $(KERNEL_DIR)/kernel.elf
+KERNEL_BIN = $(KERNEL_DIR)/kernel.bin
 OS_IMAGE = myos.img
-BOOT_BIN = boot/boot.bin
-BOOT_SRC = boot/boot.asm
 
-KERNEL_ENTRY_SRC = kernel/entry.asm
-KERNEL_ENTRY_OBJ = kernel/entry.o
-
-KERNEL_C_SRC = kernel/kernel.c
-KERNEL_C_OBJ = kernel/kernel.o
-
-TYPE_H = kernel/types.h
-
-# ========== 屏幕驱动 ==========
-SCREEN_H = drivers/screen.h
-SCREEN_C_SRC = drivers/screen.c
-SCREEN_C_OBJ = drivers/screen.o
-
-# ========== 中断相关 ==========
-INTERRUPT_H = kernel/interrupt.h
-INTERRUPT_C_SRC = kernel/interrupt.c
-INTERRUPT_C_OBJ = kernel/interrupt_c.o
-
-INTERRUPT_ASM_SRC = kernel/interrupt.asm
-INTERRUPT_ASM_OBJ = kernel/interrupt_asm.o
-
-# ========== 新增定时器驱动 ==========
-TIMER_H = drivers/timer.h
-TIMER_C_SRC = drivers/timer.c
-TIMER_C_OBJ = drivers/timer.o
-
-KERNEL_BIN = kernel/kernel.bin
-KERNEL_ELF = kernel/kernel.elf
-
+# 默认目标
 all: $(OS_IMAGE)
 
-$(OS_IMAGE): $(BOOT_BIN) $(KERNEL_BIN)
-	dd if=/dev/zero of=$(OS_IMAGE) bs=512 count=2880
-	dd if=$(BOOT_BIN) of=$(OS_IMAGE) conv=notrunc
-	dd if=$(KERNEL_BIN) of=$(OS_IMAGE) bs=512 seek=1 conv=notrunc
+# 生成操作系统镜像
+$(OS_IMAGE): $(BOOT_DIR)/boot.bin $(KERNEL_BIN)
+	@echo "Creating OS image..."
+	dd if=/dev/zero of=$@ bs=512 count=2880
+	dd if=$(BOOT_DIR)/boot.bin of=$@ conv=notrunc
+	dd if=$(KERNEL_BIN) of=$@ bs=512 seek=1 conv=notrunc
+	@echo "OS image created: $@"
 
-$(BOOT_BIN): $(BOOT_SRC)
-	$(ASM) -f bin $(BOOT_SRC) -o $(BOOT_BIN)
+# 编译引导程序
+$(BOOT_DIR)/boot.bin: $(BOOT_DIR)/boot.asm
+	@echo "Building bootloader..."
+	$(ASM) -f bin $< -o $@
 
+# 生成内核二进制文件
 $(KERNEL_BIN): $(KERNEL_ELF)
-	objcopy -O binary $(KERNEL_ELF) $(KERNEL_BIN)
+	@echo "Creating kernel binary..."
+	$(OBJCOPY) -O binary $< $@
 
-# ========== 更新链接命令，添加定时器对象 ==========
-$(KERNEL_ELF): $(KERNEL_ENTRY_OBJ) $(KERNEL_C_OBJ) $(SCREEN_C_OBJ) $(INTERRUPT_ASM_OBJ) $(INTERRUPT_C_OBJ) $(TIMER_C_OBJ)
-	$(LD) $(LDFLAGS) -o $(KERNEL_ELF) $(KERNEL_ENTRY_OBJ) $(KERNEL_C_OBJ) $(SCREEN_C_OBJ) $(INTERRUPT_ASM_OBJ) $(INTERRUPT_C_OBJ) $(TIMER_C_OBJ)
+# 链接内核
+$(KERNEL_ELF): $(ALL_OBJS)
+	@echo "Linking kernel..."
+	@echo "Object files: $(words $(ALL_OBJS)) files"
+	@echo "Link command: $(LD) ... $(ALL_OBJS)"
+	$(LD) $(LDFLAGS) -o $@ $(ALL_OBJS)
+	@echo "Kernel linked: $@"
 
-# ========== 新增定时器编译规则 ==========
-$(TIMER_C_OBJ): $(TIMER_C_SRC) $(TIMER_H) $(SCREEN_H) $(TYPE_H)
-	$(CC) $(CFLAGS) $(TIMER_C_SRC) -o $(TIMER_C_OBJ)
+# 编译规则 - 使用不同的后缀避免冲突
+%.c.o: %.c
+	@echo "Compiling C: $< -> $@"
+	$(CC) $(CFLAGS) -c $< -o $@
 
-# ========== 中断汇编编译规则 ==========
-$(INTERRUPT_ASM_OBJ): $(INTERRUPT_ASM_SRC)
-	$(ASM) $(ASFLAGS) $(INTERRUPT_ASM_SRC) -o $(INTERRUPT_ASM_OBJ)
+%.asm.o: %.asm
+	@echo "Assembling: $< -> $@"
+	$(ASM) $(ASFLAGS) $< -o $@
 
-# ========== 中断C文件编译规则 ==========
-$(INTERRUPT_C_OBJ): $(INTERRUPT_C_SRC) $(INTERRUPT_H) $(TYPE_H) $(SCREEN_H) $(TIMER_H)
-	$(CC) $(CFLAGS) $(INTERRUPT_C_SRC) -o $(INTERRUPT_C_OBJ)
-
-# ========== 更新kernel.c依赖，添加定时器头文件 ==========
-$(KERNEL_C_OBJ): $(KERNEL_C_SRC) $(SCREEN_H) $(TYPE_H) $(INTERRUPT_H) $(TIMER_H)
-	$(CC) $(CFLAGS) $(KERNEL_C_SRC) -o $(KERNEL_C_OBJ)
-
-# ========== 屏幕驱动编译规则 ==========
-$(SCREEN_C_OBJ): $(SCREEN_C_SRC) $(SCREEN_H) $(TYPE_H)
-	$(CC) $(CFLAGS) $(SCREEN_C_SRC) -o $(SCREEN_C_OBJ)
-
-# ========== 内核入口汇编编译规则 ==========
-$(KERNEL_ENTRY_OBJ): $(KERNEL_ENTRY_SRC)
-	$(ASM) $(ASFLAGS) $(KERNEL_ENTRY_SRC) -o $(KERNEL_ENTRY_OBJ)
-
-# ========== 更新清理规则，添加定时器对象文件 ==========
+# 清理构建产物
 clean:
-	rm -f  $(OS_IMAGE) $(BOOT_BIN) $(KERNEL_ELF) $(KERNEL_BIN) \
-	       $(KERNEL_ENTRY_OBJ) $(KERNEL_C_OBJ) $(SCREEN_C_OBJ) \
-	       $(INTERRUPT_ASM_OBJ) $(INTERRUPT_C_OBJ) $(TIMER_C_OBJ)
+	@echo "Cleaning build files..."
+	rm -f $(OS_IMAGE) $(BOOT_DIR)/boot.bin $(KERNEL_BIN) $(KERNEL_ELF)
+	find $(KERNEL_DIR) $(DRIVERS_DIR) -name "*.c.o" -delete
+	find $(KERNEL_DIR) $(DRIVERS_DIR) -name "*.asm.o" -delete
+
+# 显示详细的项目结构
+debug:
+	@echo "=== Build Configuration ==="
+	@echo "Kernel ASM sources:"
+	@for file in $(KERNEL_ASM_SRCS); do echo "  $$file"; done
+	@echo "Kernel C sources:"
+	@for file in $(KERNEL_C_SRCS); do echo "  $$file"; done
+	@echo "Driver C sources:"
+	@for file in $(DRIVER_C_SRCS); do echo "  $$file"; done
+	@echo "All objects:"
+	@for obj in $(ALL_OBJS); do echo "  $$obj"; done
+
+# 检查重复文件
+check-duplicates:
+	@echo "Checking for duplicate object files..."
+	@for obj in $(ALL_OBJS); do \
+		count=$$(echo "$(ALL_OBJS)" | tr ' ' '\n' | grep -c "$$obj"); \
+		if [ $$count -gt 1 ]; then \
+			echo "DUPLICATE: $$obj ($$count times)"; \
+		fi; \
+	done
 
 run: $(OS_IMAGE)
+	@echo "Starting QEMU..."
 	$(QEMU) -drive format=raw,file=$(OS_IMAGE)
 
-.PHONY: all clean run
+.PHONY: all clean run debug check-duplicates
