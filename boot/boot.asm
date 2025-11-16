@@ -19,7 +19,7 @@ start:
     xor bx, bx
     
     mov ah, 0x02    ; 读扇区
-    mov al, 16       ; 4个扇区
+    mov al, 32      ; 32个扇区
     mov ch, 0       ; 柱面0
     mov cl, 2       ; 扇区2
     mov dh, 0       ; 磁头0

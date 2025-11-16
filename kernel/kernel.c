@@ -1,6 +1,7 @@
 #include "screen.h"
 #include "interrupt.h"
 #include "timer.h"
+#include "keyboard.h"
 
 // ==================== 当前可用的测试函数 ====================
 
@@ -87,6 +88,19 @@ void test_timer_interrupt()
     
 }
 
+void test_keyboard_interrupt()
+{
+    keyboard_init();
+    install_keyboard_interrupt();
+    printf("Kernel initialized successfully\n");
+    printf("Try typing on your keyboard!\n");
+    printf("os> ");  // 简单的提示符
+    
+    // 启用中断
+    asm volatile("sti");
+
+}
+
 /**
  * 运行测试
  */
@@ -119,9 +133,7 @@ void run_test(int choice) {
             break;
             
         case 6:
-            // printf("=== Running All Available Tests ===\n\n");
-            // test_divide_by_zero();
-            // test_general_protection_fault() 不会执行，因为上面已经挂起了
+            test_keyboard_interrupt();
             break;
             
         default:
@@ -141,7 +153,12 @@ void kernel_main(void) {
     
     // 初始化中断系统
     idt_init();
-    printf("Interrupt system ready.\n\n");
+
+    init_pic();
+
+    install_timer_interrupt();
+
+    init_timer();
     
     // 显示系统信息
     // show_system_info();
@@ -152,10 +169,7 @@ void kernel_main(void) {
     
     clear_screen();
     // test_divide_by_zero();
-    run_test(5);
-    
-    // 如果异常处理失败，才会执行到这里
-    printf("\nERROR: Exception handling failed! System unstable.\n");
+    run_test(6);
     
     // 系统挂起
     while(1) {

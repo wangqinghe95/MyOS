@@ -91,18 +91,9 @@ debug:
 	@echo "All objects:"
 	@for obj in $(ALL_OBJS); do echo "  $$obj"; done
 
-# 检查重复文件
-check-duplicates:
-	@echo "Checking for duplicate object files..."
-	@for obj in $(ALL_OBJS); do \
-		count=$$(echo "$(ALL_OBJS)" | tr ' ' '\n' | grep -c "$$obj"); \
-		if [ $$count -gt 1 ]; then \
-			echo "DUPLICATE: $$obj ($$count times)"; \
-		fi; \
-	done
 
 run: $(OS_IMAGE)
 	@echo "Starting QEMU..."
 	$(QEMU) -drive format=raw,file=$(OS_IMAGE)
 
-.PHONY: all clean run debug check-duplicates
+.PHONY: all clean run debug

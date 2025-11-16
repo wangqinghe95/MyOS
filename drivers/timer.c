@@ -20,7 +20,7 @@ void timer_interrupt_handler(void)
     system_ticks++;
 
     if(system_ticks % TIMER_FREQUENCY == 0) {
-        printf("System uptiem: %d seconds\n", system_ticks/TIMER_FREQUENCY);
+        // printf("System uptiem: %d seconds\n", system_ticks/TIMER_FREQUENCY);
     }
 
     outb(0x20, 0x20);
