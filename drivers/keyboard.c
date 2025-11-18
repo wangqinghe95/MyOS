@@ -28,6 +28,14 @@ void keyboard_init()
 
 void keyboard_interrupt_handler()
 {
+
+    uint8_t status = inb(KEYBOARD_STATUS_PORT);
+    if (!(status & 0x01)) {
+        // 没有数据，直接返回（安全措施）
+        outb(0x20, 0x20);  // 发送EOI
+        return;
+    }
+
     uint8_t scancode = keyboard_read_scancode();
 
     if(scancode < 128) {

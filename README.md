@@ -46,6 +46,30 @@ make
 make run
 ```
 
+## 文件夹结构
+
+├── boot
+│   └── boot.asm
+├── drivers
+│   ├── keyboard.c
+│   ├── keyboard.h
+│   ├── screen.c
+│   ├── screen.h
+│   ├── timer.c
+│   └── timer.h
+├── kernel
+│   ├── entry.asm
+│   ├── interrupt.asm
+│   ├── interrupt.c
+│   ├── interrupt.h
+│   ├── kernel.c
+│   └── types.h
+├── libs
+├── Makefile
+├── README.md
+└── scripts
+    └── linker.ld
+
 ## 进度
 
 ### [day01 一个简单的引导程序](./record/Day01.md)
@@ -69,7 +93,8 @@ make run
 
 ### [day05 屏幕驱动代码](./record/Day05.md)
 
-使用 C 完成屏幕驱动代码的编写
+后续开发计划
+
 + 光标控制
 + 颜色管理
 + 格式化输出
@@ -87,22 +112,37 @@ make run
 + 屏幕信息显示
 + 错误状态返回
 
-### [day06 中断代码——除零异常处理](./record/Day06.md)
+### 中断管理开发
 
-+ 添加除零异常代码
+1. [day06-1 中断代码——除零异常处理](./record/Day06-01.md)
+2. [day06-2 中断代码——通用保护故障异常处理](./record/Day06-02.md)
+3. [day06-3 中断代码——定时器中断开发](./record/Day06-03.md)
+4. [day06-4 中断代码——键盘中断开发](./record/Day06-04.md)
 
-### [day07 中断代码——通用保护故障异常处理](./record/Day06.md)
+后续开发计划：
++ 特殊键处理（Ctrl, Alt, Shift）
++ 键盘指示灯（CapsLock, NumLock）
++ 更复杂的命令行解析
++ 键盘布局支持（不同国家）
++ 构建简单的 shell
++ 简单的文本剪辑器
 
-+ 添加通用保护故障异常处理代码
+### 内存管理开发
+
+1. 物理内存管理
+2. 虚拟内存管理
+3. 高级内存管理
+
+
+位图物理页面分配器 - 跟踪哪些物理页面被使用
+
+kmalloc/kfree实现 - 内核堆管理
+
+分页机制 - 虚拟内存支持
+
+缺页处理 - 按需分页
 
 ## 进阶/下一步建议
-
-### 设置中断描述符表
-
-+ 异常处理（除零、页错误等）
-+ 定时器中断
-+ 键盘中断
-+ 可编程中断控制器
 
 ### 物理内存管理
 
@@ -135,3 +175,26 @@ make run
 
 + 特权级切换
 + 系统调用门
+
+## 开发任务表
+
+阶段一：完善核心系统
+进程管理 - kernel/process.c, kernel/scheduler.c
+
+内存分页 - kernel/paging.c, kernel/memory.c
+
+文件系统 - kernel/fs.c, drivers/ata.c
+
+阶段二：设备驱动
+键盘输入 - drivers/keyboard.c
+
+硬盘驱动 - drivers/ata.c
+
+鼠标支持 - drivers/mouse.c
+
+阶段三：用户空间
+系统调用 - kernel/syscall.c
+
+ELF加载器 - kernel/elf.c
+
+用户程序 - apps/ 目录
