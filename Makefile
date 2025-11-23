@@ -11,17 +11,24 @@ KERNEL_DIR = kernel
 DRIVERS_DIR = drivers
 SCRIPT_DIR = scripts
 
-# 编译和链接标志
-CFLAGS = -m32 -nostdlib -ffreestanding -Wall -Wextra -I$(KERNEL_DIR) -I$(DRIVERS_DIR)
+# 内存配置 - 可覆盖的默认值
+QEMU_MEMORY ?= 64
+KERNEL_MEMORY_MB ?= 64
+
+# 编译和链接标志 - 传递内存大小给内核
+CFLAGS = -m32 -nostdlib -ffreestanding -Wall -Wextra \
+         -I$(KERNEL_DIR) -I$(DRIVERS_DIR) -I$(KERNEL_DIR)/memory \
+         -DKERNEL_MEMORY_MB=$(KERNEL_MEMORY_MB)
+
 LDFLAGS = -m elf_i386 -T $(SCRIPT_DIR)/linker.ld -nostdlib
 ASFLAGS = -f elf32
 
-# 自动查找源文件（使用更精确的查找）
+# 自动查找源文件
 KERNEL_C_SRCS = $(shell find $(KERNEL_DIR) -name "*.c" -not -name ".*")
 DRIVER_C_SRCS = $(shell find $(DRIVERS_DIR) -name "*.c" -not -name ".*")
 KERNEL_ASM_SRCS = $(shell find $(KERNEL_DIR) -name "*.asm" -not -name ".*")
 
-# 推导目标文件（使用不同的命名避免冲突）
+# 推导目标文件
 KERNEL_C_OBJS = $(KERNEL_C_SRCS:.c=.c.o)
 DRIVER_C_OBJS = $(DRIVER_C_SRCS:.c=.c.o)
 KERNEL_ASM_OBJS = $(KERNEL_ASM_SRCS:.asm=.asm.o)
@@ -59,11 +66,11 @@ $(KERNEL_BIN): $(KERNEL_ELF)
 $(KERNEL_ELF): $(ALL_OBJS)
 	@echo "Linking kernel..."
 	@echo "Object files: $(words $(ALL_OBJS)) files"
-	@echo "Link command: $(LD) ... $(ALL_OBJS)"
+	@echo "Configured memory: $(KERNEL_MEMORY_MB) MB"
 	$(LD) $(LDFLAGS) -o $@ $(ALL_OBJS)
 	@echo "Kernel linked: $@"
 
-# 编译规则 - 使用不同的后缀避免冲突
+# 编译规则
 %.c.o: %.c
 	@echo "Compiling C: $< -> $@"
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -82,6 +89,8 @@ clean:
 # 显示详细的项目结构
 debug:
 	@echo "=== Build Configuration ==="
+	@echo "Kernel memory: $(KERNEL_MEMORY_MB) MB"
+	@echo "QEMU memory: $(QEMU_MEMORY) MB"
 	@echo "Kernel ASM sources:"
 	@for file in $(KERNEL_ASM_SRCS); do echo "  $$file"; done
 	@echo "Kernel C sources:"
@@ -91,9 +100,39 @@ debug:
 	@echo "All objects:"
 	@for obj in $(ALL_OBJS); do echo "  $$obj"; done
 
-
+# 运行目标 - 支持不同内存配置
 run: $(OS_IMAGE)
-	@echo "Starting QEMU..."
-	$(QEMU) -drive format=raw,file=$(OS_IMAGE)
+	@echo "Starting QEMU with $(QEMU_MEMORY)MB RAM..."
+	$(QEMU) -m $(QEMU_MEMORY) -drive format=raw,file=$(OS_IMAGE)
 
-.PHONY: all clean run debug
+# 预定义的内存配置
+run-16: $(OS_IMAGE)
+	@echo "Starting QEMU with 16MB RAM..."
+	$(QEMU) -m 16 -drive format=raw,file=$(OS_IMAGE)
+
+run-32: $(OS_IMAGE)
+	@echo "Starting QEMU with 32MB RAM..."
+	$(QEMU) -m 32 -drive format=raw,file=$(OS_IMAGE)
+
+run-64: $(OS_IMAGE)
+	@echo "Starting QEMU with 64MB RAM..."
+	$(QEMU) -m 64 -drive format=raw,file=$(OS_IMAGE)
+
+run-128: $(OS_IMAGE)
+	@echo "Starting QEMU with 128MB RAM..."
+	$(QEMU) -m 128 -drive format=raw,file=$(OS_IMAGE)
+
+# 构建时指定内存大小
+build-16:
+	@make clean
+	@make KERNEL_MEMORY_MB=16
+
+build-64:
+	@make clean  
+	@make KERNEL_MEMORY_MB=64
+
+build-128:
+	@make clean
+	@make KERNEL_MEMORY_MB=128
+
+.PHONY: all clean run run-16 run-32 run-64 run-128 build-16 build-64 build-128 debug

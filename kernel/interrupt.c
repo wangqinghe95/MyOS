@@ -73,8 +73,8 @@ void idt_init(void) {
     idt_load((uint32_t)&idtp); 
     
     printf("IDT initialized with exception handlers\n");
-    printf("  - ISR0 (Divide Error) at: 0x%x\n", (uint32_t)isr0);
-    printf("  - ISR13 (GPF) at: 0x%x\n", (uint32_t)isr13);
+    // printf("  - ISR0 (Divide Error) at: 0x%x\n", (uint32_t)isr0);
+    // printf("  - ISR13 (GPF) at: 0x%x\n", (uint32_t)isr13);
 }
 
 void init_pic(void)
@@ -94,7 +94,7 @@ void init_pic(void)
     outb(0x21, 0xFC);
     outb(0xA1, 0xFF);
 
-    printf("PIC remapped: IRQ0-7 -> 0x20-0x27");
+    // printf("PIC remapped: IRQ0-7 -> 0x20-0x27");
 }
 
 void install_timer_interrupt(void)
