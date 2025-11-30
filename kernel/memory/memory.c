@@ -72,18 +72,6 @@ uint32_t get_kernel_memory_mb(void)
     return KERNEL_MEMORY_MB;
 }
 
-void* kmalloc(uint32_t size)
-{
-    printf("Kmalloc(%d): TODO - using frame allocator temporarily\n", size);
-
-    if(size <= PAGE_SIZE) {
-        return (void*)allocate_frame();
-    }
-
-    return 0;
-}
-
-
 void init_bitmap_allocator(void)
 {
     printf("Initializing bitmap allocator...\n");
@@ -163,15 +151,6 @@ void init_kernel_heap(void)
 {
     printf("Kernel heap: TODO - starting at 0x%x\n", KERNEL_HEAP_START);
 }
-
-void kfree(void* ptr)
-{
-    printf("kfree(0x%x) : TODO\n", (uint32_t)ptr);
-    if(ptr != 0) {
-        free_frame((uint32_t)ptr);
-    }
-}
-
 
 void set_bitmap(uint32_t bit)
 {

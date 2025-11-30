@@ -18,7 +18,8 @@ KERNEL_MEMORY_MB ?= 64
 # 编译和链接标志 - 传递内存大小给内核
 CFLAGS = -m32 -nostdlib -ffreestanding -Wall -Wextra \
          -I$(KERNEL_DIR) -I$(DRIVERS_DIR) -I$(KERNEL_DIR)/memory \
-         -DKERNEL_MEMORY_MB=$(KERNEL_MEMORY_MB)
+         -DKERNEL_MEMORY_MB=$(KERNEL_MEMORY_MB)\
+		 -DDEBUG_HEAP
 
 LDFLAGS = -m elf_i386 -T $(SCRIPT_DIR)/linker.ld -nostdlib
 ASFLAGS = -f elf32

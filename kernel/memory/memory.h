@@ -43,8 +43,4 @@ void print_bitmap_stats(void);
 
 void init_kernel_heap(void);
 
-void* kmalloc(uint32_t size);
-void kfree(void* ptr);
-
-
 #endif
