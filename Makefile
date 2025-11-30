@@ -86,19 +86,6 @@ clean:
 	find $(KERNEL_DIR) $(DRIVERS_DIR) -name "*.c.o" -delete
 	find $(KERNEL_DIR) $(DRIVERS_DIR) -name "*.asm.o" -delete
 
-# 显示详细的项目结构
-debug:
-	@echo "=== Build Configuration ==="
-	@echo "Kernel memory: $(KERNEL_MEMORY_MB) MB"
-	@echo "QEMU memory: $(QEMU_MEMORY) MB"
-	@echo "Kernel ASM sources:"
-	@for file in $(KERNEL_ASM_SRCS); do echo "  $$file"; done
-	@echo "Kernel C sources:"
-	@for file in $(KERNEL_C_SRCS); do echo "  $$file"; done
-	@echo "Driver C sources:"
-	@for file in $(DRIVER_C_SRCS); do echo "  $$file"; done
-	@echo "All objects:"
-	@for obj in $(ALL_OBJS); do echo "  $$obj"; done
 
 # 运行目标 - 支持不同内存配置
 run: $(OS_IMAGE)
