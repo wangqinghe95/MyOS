@@ -115,7 +115,8 @@ void printk_color(const char* str, uint8_t color) {
     }
 }
 
-/* 整数转字符串 */
+/****
+
 static void itoa(int value, char* str, int base) {
     char* ptr = str;
     char* ptr1 = str;
@@ -146,7 +147,6 @@ static void itoa(int value, char* str, int base) {
     }
 }
 
-/* 支持格式化的输出函数 */
 void printf(const char* format, ...) {
     va_list args;
     va_start(args, format);
@@ -191,3 +191,5 @@ void printf(const char* format, ...) {
     
     va_end(args);
 }
+
+ ****/

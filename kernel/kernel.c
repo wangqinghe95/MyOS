@@ -1,9 +1,9 @@
 #include "interrupt.h"
-#include "screen.h"
 #include "memory.h"
 #include "timer.h"
 #include "keyboard.h"
 #include "heap.h"
+#include "stdio.h"
 
 void test_memory_allocation(void) {
     printf("\n=== Memory Allocation Test ===\n");
@@ -178,6 +178,8 @@ void kernel_main(void) {
     init_timer();
     keyboard_init();
     
+    test_stdio_functions();
+
     printf("\nKernel initialized successfully\n");
     printf("System ready with %d MB memory\n", get_kernel_memory_mb());
     printf("Heap allocator active - type 'help' for commands\n");

@@ -24,11 +24,7 @@ void kfree(void* ptr);
 void heap_dump(void);
 void heap_stats(void);
 
-#ifdef DEBUG_HEAP
-#define HEAP_DEBUG(msg, ...) printf("[HEAP] " msg "\n", ##__VA_ARGS)
-#else
 #define HEAP_DEBUG(mgs, ...)
-#endif
 
 
 #endif

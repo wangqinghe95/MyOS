@@ -1,5 +1,5 @@
 #include "timer.h"
-#include "screen.h"
+#include "stdio.h"
 
 volatile uint32_t system_ticks = 0;
 

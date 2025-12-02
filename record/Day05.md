@@ -150,7 +150,7 @@ uint16_t get_cursor_pos(void);
 ### screen.c
 
 ```screen.c
-#include "screen.h"
+#include "stdio.h"
 #include <stdarg.h>
 
 /* VGA 文本模式内存地址 */

@@ -8,6 +8,7 @@ QEMU = qemu-system-x86_64
 # 目录结构
 BOOT_DIR = boot
 KERNEL_DIR = kernel
+LIBS_DIR = libs
 DRIVERS_DIR = drivers
 SCRIPT_DIR = scripts
 
@@ -17,9 +18,8 @@ KERNEL_MEMORY_MB ?= 64
 
 # 编译和链接标志 - 传递内存大小给内核
 CFLAGS = -m32 -nostdlib -ffreestanding -Wall -Wextra \
-         -I$(KERNEL_DIR) -I$(DRIVERS_DIR) -I$(KERNEL_DIR)/memory \
+         -I$(KERNEL_DIR) -I$(DRIVERS_DIR) -I$(KERNEL_DIR)/memory -I$(LIBS_DIR) \
          -DKERNEL_MEMORY_MB=$(KERNEL_MEMORY_MB)\
-		 -DDEBUG_HEAP
 
 LDFLAGS = -m elf_i386 -T $(SCRIPT_DIR)/linker.ld -nostdlib
 ASFLAGS = -f elf32
@@ -28,14 +28,16 @@ ASFLAGS = -f elf32
 KERNEL_C_SRCS = $(shell find $(KERNEL_DIR) -name "*.c" -not -name ".*")
 DRIVER_C_SRCS = $(shell find $(DRIVERS_DIR) -name "*.c" -not -name ".*")
 KERNEL_ASM_SRCS = $(shell find $(KERNEL_DIR) -name "*.asm" -not -name ".*")
+LIBS_C_SRCS = $(shell find $(LIBS_DIR) -name "*.c" -not -name ".*")
 
 # 推导目标文件
 KERNEL_C_OBJS = $(KERNEL_C_SRCS:.c=.c.o)
 DRIVER_C_OBJS = $(DRIVER_C_SRCS:.c=.c.o)
+LIBS_C_OBJS = $(LIBS_C_SRCS:.c=.c.o)
 KERNEL_ASM_OBJS = $(KERNEL_ASM_SRCS:.asm=.asm.o)
 
 # 正确的链接顺序
-ALL_OBJS = $(KERNEL_ASM_OBJS) $(KERNEL_C_OBJS) $(DRIVER_C_OBJS)
+ALL_OBJS = $(KERNEL_ASM_OBJS) $(KERNEL_C_OBJS) $(DRIVER_C_OBJS) $(LIBS_C_OBJS)
 
 # 最终目标
 KERNEL_ELF = $(KERNEL_DIR)/kernel.elf
@@ -84,7 +86,7 @@ $(KERNEL_ELF): $(ALL_OBJS)
 clean:
 	@echo "Cleaning build files..."
 	rm -f $(OS_IMAGE) $(BOOT_DIR)/boot.bin $(KERNEL_BIN) $(KERNEL_ELF)
-	find $(KERNEL_DIR) $(DRIVERS_DIR) -name "*.c.o" -delete
+	find $(KERNEL_DIR) $(DRIVERS_DIR) $(LIBS_DIR) -name "*.c.o" -delete
 	find $(KERNEL_DIR) $(DRIVERS_DIR) -name "*.asm.o" -delete
 
 

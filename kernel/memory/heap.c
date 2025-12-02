@@ -1,6 +1,6 @@
 #include "heap.h"
 #include "memory.h"
-#include "screen.h"
+#include "stdio.h"
 #include "string.h"
 
 static struct heap_block_header* heap_start = NULL;

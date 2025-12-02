@@ -1,6 +1,6 @@
 #include "memory.h"
 
-#include "screen.h"
+#include "stdio.h"
 #include "interrupt.h"
 
 static uint32_t total_memory = 0;
