@@ -4,6 +4,7 @@
 #include "keyboard.h"
 #include "heap.h"
 #include "stdio.h"
+#include "logging.h"
 
 void test_memory_allocation(void) {
     printf("\n=== Memory Allocation Test ===\n");
@@ -178,7 +179,8 @@ void kernel_main(void) {
     init_timer();
     keyboard_init();
     
-    test_stdio_functions();
+    // test_stdio_functions();
+    test_logging_system();
 
     printf("\nKernel initialized successfully\n");
     printf("System ready with %d MB memory\n", get_kernel_memory_mb());

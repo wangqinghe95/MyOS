@@ -1,5 +1,20 @@
 #include "stdio.h"
 
+typedef enum {
+    FLAG_NONE = 0,
+    FLAG_ZERO = 1 << 0,
+    FLAG_LEFT = 1 << 1,
+} format_flags;
+
+void memset(void* ptr, uint8_t value, uint32_t size)
+{
+    uint8_t* p = (uint8_t*)ptr;
+    for(uint32_t i = 0; i < size; i++)
+    {
+        p[i] = value;
+    }
+}
+
 int printf(const char* format, ...)
 {
     char buffer[256];
@@ -37,51 +52,92 @@ int sprintf(char* buffer, const char* format, ...)
     return result;
 }
 
+bool isdigit(char c)
+{
+    return (c >= '0' && c <= '9');
+}
+
+static void format_string(char* dest, const char* src, int width, format_flags flags) {
+    int len = strlen(src);
+    int pad = width > len ? width - len : 0;
+    
+    if (flags & FLAG_LEFT) {
+        strcpy(dest, src);
+        memset(dest + len, ' ', pad);
+    } else {
+        memset(dest, (flags & FLAG_ZERO) ? '0' : ' ', pad);
+        strcpy(dest + pad, src);
+    }
+    dest[width > len ? width : len] = '\0';
+}
+
+static void format_number(char* dest, int num, int base, int width, format_flags flags) {
+    char num_buf[32];
+    itoa(num, num_buf, base);
+    format_string(dest, num_buf, width, flags);
+}
 
 int vsprintf(char* buffer, const char* format, va_list args)
 {
     char* ptr = buffer;
     char num_buffer[32];
-    char* str_arg;
-    int int_arg;
 
     while (*format)
     {
         if(*format == '%') {
             format++;
+
+            format_flags flags = FLAG_NONE;
+            while (*format == '0' || *format == '-')
+            {
+                if(*format == '0') flags |= FLAG_ZERO;
+                if(*format == '-') flags |= FLAG_LEFT;
+                format++;
+            }
+
+            int width = 0;
+            while (isdigit(*format))
+            {
+                width = width * 10 + (*format - '0');
+                format++;
+            }
+            
             switch (*format)
             {
             case 'd':
-            case 'i':
-                int_arg = va_arg(args, int);
-                itoa(int_arg, num_buffer, 10);
+            case 'i':{
+                int num = va_arg(args, int);
+                format_number(num_buffer, num, 10, width, flags);
+                // itoa(int_arg, num_buffer, 10);
                 strcpy(ptr, num_buffer);
                 ptr += strlen(num_buffer);
                 break;
+            }
 
-            case 'u':
-                int_arg = va_arg(args, int);
-                itoa(int_arg, num_buffer, 10);
+            case 'u':{
+                unsigned int num = va_arg(args, unsigned int);
+                format_number(num_buffer, num, 10, width, flags);
                 strcpy(ptr, num_buffer);
                 ptr += strlen(num_buffer);
                 break;
-
+            }
             case 'x':
-            case 'X':
-                int_arg = va_arg(args, int);
-                itoa(int_arg, num_buffer, 16);
+            case 'X':{
+                unsigned int num = va_arg(args, unsigned int);
+                format_number(num_buffer, num, 16, width, flags);
                 strcpy(ptr, num_buffer);
                 ptr += strlen(num_buffer);
                 break;
-
+            }
             case 'c':
                 *ptr++ = (char)va_arg(args, int);
                 break;
 
             case 's':
-                str_arg = va_arg(args, char*);
-                strcpy(ptr, str_arg);
-                ptr += strlen(str_arg);
+                char* str = va_arg(args, char*);
+                format_string(num_buffer, str ? str : "(null)", width, flags);
+                strcpy(ptr, num_buffer);
+                ptr += strlen(num_buffer);
                 break;
 
             case '%':

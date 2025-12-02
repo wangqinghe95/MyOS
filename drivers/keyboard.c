@@ -17,7 +17,7 @@ static uint32_t buffer_index = 0;
 
 void keyboard_init()
 {
-    printf("Initializing keyboard...\n");
+    // printf("Initializing keyboard...\n");
 
     uint8_t current_mask = inb(0x21);
 

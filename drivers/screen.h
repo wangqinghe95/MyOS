@@ -49,8 +49,7 @@ static inline uint16_t make_vga_entry(char c, uint8_t color) {
 /* 函数声明 */
 void clear_screen(void);
 void put_char(char c, uint8_t color);
-// void printk(const char* str);
-// void printf(const char* format, ...);
+void printk(const char* str);
 void printk_color(const char* str, uint8_t color);
 void set_cursor_pos(uint8_t x, uint8_t y);
 uint16_t get_cursor_pos(void);

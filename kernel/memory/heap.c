@@ -1,7 +1,7 @@
 #include "heap.h"
 #include "memory.h"
 #include "stdio.h"
-#include "string.h"
+// #include "string.h"
 
 static struct heap_block_header* heap_start = NULL;
 static struct heap_block_header* heap_end = NULL;

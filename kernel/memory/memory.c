@@ -4,28 +4,14 @@
 #include "interrupt.h"
 
 static uint32_t total_memory = 0;
-static uint32_t usable_memory = 0;
-static struct memory_region* memory_map = (struct memory_region*)(0x5000);
-static uint32_t memory_map_entries = 0;
+// static uint32_t usable_memory = 0;
+// static struct memory_region* memory_map = (struct memory_region*)(0x5000);
+// static uint32_t memory_map_entries = 0;
 
 static uint8_t bitmap[BITMAP_SIZE] = {0};
 static uint32_t total_frames = 0;
 static uint32_t used_frames = 0;
 static uint32_t bitmap_start_addr = 0;
-
-/**
- * string operation
- * temporary realize
- * move to lib later
- */
-static void memset(void* ptr, uint8_t value, uint32_t size)
-{
-    uint8_t* p = (uint8_t*)ptr;
-    for(uint32_t i = 0; i < size; i++)
-    {
-        p[i] = value;
-    }
-}
 
 void detect_memory(void)
 {
